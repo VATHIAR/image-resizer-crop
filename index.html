@@ -3,106 +3,309 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document Photo Cropper</title>
+    
+    <!-- SEO: Meta Tags -->
+    <title>Free Document Photo Cropper | Image Resizer & Compressor</title>
+    <meta name="description" content="Free online tool to crop, rotate, resize, and compress images for passports, visas, and documents. Secure browser-based processing with no uploads.">
+    <meta name="keywords" content="image resizer, size reduce, crop image, passport photo maker, compress jpeg, online photo editor">
+    <meta name="robots" content="index, follow">
+    
+    <!-- SEO: Open Graph (Social Sharing) -->
+    <meta property="og:title" content="Document Photo Cropper - Resize & Compress">
+    <meta property="og:description" content="Securely crop and resize your photos directly in your browser. No signup required.">
+    <meta property="og:type" content="website">
+
+    <!-- Favicon (SVG) -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✂️</text></svg>">
+
     <!-- Cropper.js CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+    
+    <!-- Structured Data (JSON-LD) for SEO -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "SoftwareApplication",
+          "name": "Document Photo Cropper",
+          "applicationCategory": "MultimediaApplication",
+          "operatingSystem": "Web Browser",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          },
+          "featureList": "Image cropping, Resizing, Compression, Rotation"
+        },
+        {
+          "@type": "HowTo",
+          "name": "How to Resize and Crop a Document Photo",
+          "step": [
+            { "@type": "HowToStep", "text": "Upload your image file." },
+            { "@type": "HowToStep", "text": "Rotate and crop the image to center the subject." },
+            { "@type": "HowToStep", "text": "Enter target width and height in pixels." },
+            { "@type": "HowToStep", "text": "Set maximum file size in KB for compression." },
+            { "@type": "HowToStep", "text": "Click Crop & Download." }
+          ]
+        }
+      ]
+    }
+    </script>
+
     <style>
+        /* CSS Variables for Theme Management */
+        :root {
+            --bg-color: #f4f4f9;
+            --container-bg: #ffffff;
+            --text-color: #333333;
+            --text-secondary: #555555;
+            --border-color: #dddddd;
+            --input-bg: #ffffff;
+            --primary-color: #007bff;
+            --primary-hover: #0056b3;
+            --control-group-bg: #f9f9f9;
+        }
+
+        /* Dark Mode Overrides */
+        body.dark-mode {
+            --bg-color: #1a1a1a;
+            --container-bg: #2d2d2d;
+            --text-color: #e0e0e0;
+            --text-secondary: #b0b0b0;
+            --border-color: #444444;
+            --input-bg: #3d3d3d;
+            --primary-color: #4da3ff;
+            --primary-hover: #2b82df;
+            --control-group-bg: #363636;
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f4f9;
+            background-color: var(--bg-color);
             margin: 0;
             padding: 20px;
-            color: #333;
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* --- ANIMATIONS --- */
+        
+        /* Attention Wiggle Animation */
+        @keyframes wiggle {
+            0% { transform: rotate(0deg); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+            10% { transform: rotate(-15deg); }
+            20% { transform: rotate(15deg); }
+            30% { transform: rotate(-15deg); }
+            40% { transform: rotate(15deg); }
+            50% { transform: rotate(0deg); box-shadow: 0 0 15px var(--primary-color); }
+            100% { transform: rotate(0deg); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        }
+
+        /* Click Spin Animation */
+        @keyframes spin {
+            0% { transform: scale(1) rotate(0deg); }
+            50% { transform: scale(0.8) rotate(180deg); }
+            100% { transform: scale(1) rotate(360deg); }
+        }
+
+        /* Theme Toggle Button */
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: var(--container-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 10px;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            z-index: 1000;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+
+        /* Animation Classes */
+        .theme-toggle.attention {
+            animation: wiggle 2s ease-in-out infinite;
+            border-color: var(--primary-color);
+        }
+
+        .theme-toggle.clicked {
+            animation: spin 0.5s ease-in-out;
         }
 
         .container {
             max-width: 1000px;
             margin: 0 auto;
-            background: white;
+            background: var(--container-bg);
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             display: flex;
             flex-wrap: wrap;
             gap: 20px;
+            transition: background-color 0.3s;
         }
 
-        h2 { margin-top: 0; width: 100%; }
+        /* --- SEO & Blog Styles --- */
+        .seo-section {
+            max-width: 1000px;
+            margin: 30px auto;
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
 
-        /* Left Side: Editor */
+        .seo-content {
+            background: var(--container-bg);
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        .seo-content h1 { font-size: 1.6rem; color: var(--primary-color); margin-top: 0; }
+        .seo-content h2 { font-size: 1.3rem; margin-top: 20px; color: var(--text-color); }
+        .seo-content p, .seo-content ul { font-size: 0.95rem; }
+        .seo-content strong { color: var(--text-color); }
+        .seo-content li { margin-bottom: 8px; }
+
+        .blog-sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .blog-card {
+            background: var(--container-bg);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        .blog-card:hover { transform: translateY(-2px); }
+        .blog-card h3 { margin: 0 0 10px 0; font-size: 1.1rem; }
+        .blog-card a { text-decoration: none; color: var(--text-color); }
+        .blog-card a:hover { color: var(--primary-color); }
+        .blog-meta { font-size: 0.8rem; color: var(--text-secondary); opacity: 0.8; display: block; margin-top: 5px; }
+
+        @media (max-width: 768px) {
+            .seo-section { grid-template-columns: 1fr; }
+        }
+
+        /* --- App Styles --- */
+        h2.app-title { margin-top: 0; margin-bottom: 5px; width: 100%; color: var(--text-color); }
+        
+        .privacy-note {
+            width: 100%;
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            font-style: italic;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+
         .editor-area {
             flex: 2;
             min-width: 300px;
-            background: #333; /* Dark background for better visibility */
-            height: 500px;
+            background: #222; /* Always dark for image contrast */
+            height: 550px;
             border-radius: 4px;
             overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
+            position: relative;
         }
 
-        #image {
-            max-width: 100%;
-            display: block; /* Important for cropper.js */
-        }
+        #image { max-width: 100%; display: block; }
+        .placeholder-text { color: #aaa; }
 
-        .placeholder-text {
-            color: #aaa;
-        }
-
-        /* Right Side: Controls */
         .controls-area {
             flex: 1;
-            min-width: 250px;
+            min-width: 280px;
             display: flex;
             flex-direction: column;
             gap: 15px;
         }
 
         .control-group {
-            background: #f9f9f9;
+            background: var(--control-group-bg);
             padding: 15px;
             border-radius: 6px;
-            border: 1px solid #ddd;
+            border: 1px solid var(--border-color);
         }
 
         .control-group label {
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
             font-weight: 600;
             font-size: 0.9rem;
+            color: var(--text-color);
         }
 
         .input-row {
             display: flex;
-            gap: 10px;
-            align-items: center;
+            gap: 5px;
+            align-items: flex-end;
         }
+
+        .input-wrapper { flex: 1; }
+        .input-wrapper small { display: block; margin-bottom: 2px; font-size: 0.75rem; color: var(--text-secondary); }
 
         input[type="number"], input[type="file"] {
             width: 100%;
             padding: 8px;
-            border: 1px solid #ccc;
+            border: 1px solid var(--border-color);
+            background: var(--input-bg);
+            color: var(--text-color);
             border-radius: 4px;
+            box-sizing: border-box;
         }
         
-        /* Rotation Controls */
-        .rotate-inputs {
-            display: flex;
-            align-items: center;
-            gap: 10px;
+        /* Swap Button */
+        .btn-icon {
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            cursor: pointer;
+            padding: 8px 10px;
+            border-radius: 4px;
+            font-size: 1.2rem;
+            line-height: 1;
+            height: 38px;
         }
-        input[type="range"] {
-            flex-grow: 1;
-        }
-        .rotate-val {
-            width: 60px !important;
-        }
+        .btn-icon:hover { background: var(--border-color); }
 
-        /* Buttons */
+        .btn-link {
+            background: none;
+            border: none;
+            color: var(--primary-color);
+            font-size: 0.8rem;
+            text-decoration: underline;
+            cursor: pointer;
+            padding: 0;
+            margin-top: 5px;
+            display: inline-block;
+        }
+        .btn-link:hover { color: var(--primary-hover); }
+
+        .rotate-inputs { display: flex; align-items: center; gap: 10px; }
+        input[type="range"] { flex-grow: 1; }
+        .rotate-val { width: 60px !important; }
+
         .btn {
-            background-color: #007bff;
+            background-color: var(--primary-color);
             color: white;
             border: none;
             padding: 12px;
@@ -112,36 +315,37 @@
             width: 100%;
             transition: background 0.2s;
         }
-        .btn:hover { background-color: #0056b3; }
+        .btn:hover { background-color: var(--primary-hover); }
         .btn:disabled { background-color: #ccc; cursor: not-allowed; }
 
-        /* Result Area */
         #result-container {
             margin-top: 20px;
             display: none;
-            border-top: 2px solid #eee;
+            border-top: 2px solid var(--border-color);
             padding-top: 20px;
             width: 100%;
         }
-        #result-image {
-            border: 1px solid #ccc;
-            margin-bottom: 10px;
-        }
-        .success-msg {
-            color: green;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-        .error-msg {
-            color: red;
-            font-size: 0.9rem;
-        }
+        #result-image { border: 1px solid var(--border-color); margin-bottom: 10px; max-width: 100%; }
+        
+        /* Adjusted for Dark Mode readability */
+        .success-msg { color: #28a745; font-weight: bold; margin-bottom: 10px; }
+        .error-msg { color: #dc3545; font-size: 0.9rem; }
+        body.dark-mode .success-msg { color: #4cd16e; }
+        body.dark-mode .error-msg { color: #ff6b6b; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>🛂 Passport Photo Crop & Resize</h2>
+<!-- Dark Mode Toggle -->
+<button class="theme-toggle" id="themeToggle" aria-label="Toggle Dark Mode" title="Toggle Dark Mode">
+    🌓
+</button>
+
+<main class="container">
+    <header style="width:100%;">
+        <h2 class="app-title">🛂 Image Resize & Crop</h2>
+        <p class="privacy-note">Privacy Note: All processing happens in your browser. Your images, your eyes only.</p>
+    </header>
 
     <!-- Image Editor Area -->
     <div class="editor-area">
@@ -154,42 +358,44 @@
         
         <!-- Upload -->
         <div class="control-group">
-            <label>1. Upload Image</label>
+            <label for="inputImage">1. Upload Image</label>
             <input type="file" id="inputImage" accept="image/*">
         </div>
 
         <!-- Rotation -->
         <div class="control-group">
-            <label>2. Rotate Image (Degrees)</label>
+            <label>2. Rotate & Straighten</label>
             <div class="rotate-inputs">
-                <!-- Slider -->
-                <input type="range" id="rotateSlider" min="-45" max="45" value="0" step="0.1" disabled>
-                <!-- Number Input -->
-                <input type="number" id="rotateInput" class="rotate-val" value="0" min="-180" max="180" step="0.1" disabled>
+                <input type="range" id="rotateSlider" min="-45" max="45" value="0" step="0.1" disabled aria-label="Rotation Slider">
+                <input type="number" id="rotateInput" class="rotate-val" value="0" min="-180" max="180" step="0.1" disabled aria-label="Rotation Degree Input">
             </div>
-            <small style="color:#666; display:block; margin-top:5px;">Use slider for fine tuning</small>
         </div>
 
         <!-- Dimensions -->
         <div class="control-group">
             <label>3. Target Size (Pixels)</label>
             <div class="input-row">
-                <div>
+                <div class="input-wrapper">
                     <small>Width</small>
-                    <input type="number" id="targetWidth" value="150">
+                    <input type="number" id="targetWidth" value="150" aria-label="Target Width">
                 </div>
-                <div>
+                
+                <button id="btnSwap" class="btn-icon" title="Swap Width and Height" aria-label="Swap Dimensions">⇄</button>
+                
+                <div class="input-wrapper">
                     <small>Height</small>
-                    <input type="number" id="targetHeight" value="200">
+                    <input type="number" id="targetHeight" value="200" aria-label="Target Height">
                 </div>
             </div>
+            <!-- Original Size Option -->
+            <button id="btnOriginal" class="btn-link" style="display:none;">Use Original Image Size</button>
         </div>
 
         <!-- File Size Limit -->
         <div class="control-group">
-            <label>4. Max File Size (KB)</label>
+            <label for="maxSizeKB">4. Max File Size (KB)</label>
             <input type="number" id="maxSizeKB" value="100">
-            <small style="color: #666">App will compress image to fit.</small>
+            <small style="color: var(--text-secondary)">Auto-compress to size reduce.</small>
         </div>
 
         <!-- Action -->
@@ -204,12 +410,102 @@
         <br>
         <a id="downloadLink" class="btn" style="display:inline-block; width: auto; background-color: #28a745;">Download Image</a>
     </div>
+</main>
+
+<!-- SEO & BLOG SECTION -->
+<div class="seo-section">
+    <!-- Main SEO Text: Article Tag for Semantic SEO -->
+    <article class="seo-content">
+        <h1>Free Online Image Resizer and Document Cropper</h1>
+        <p>
+            Welcome to the ultimate tool for managing your digital photos. Whether you are applying for a passport, visa, or job application, 
+            our tool serves as a powerful <strong>image resizer</strong> and editor. It is designed to help you quickly <strong>crop</strong> 
+            photos to exact specifications and <strong>size reduce</strong> large files to meet strict upload limits.
+        </p>
+        
+        <h2>Why Use This Photo Tool?</h2>
+        <ul>
+            <li>
+                <strong>Precise Crop Functionality:</strong> Easily adjust the framing of your photo. The built-in <strong>crop</strong> 
+                tool allows you to center your face and remove unnecessary backgrounds.
+            </li>
+            <li>
+                <strong>Size Reduce & Compression:</strong> Many government websites restrict file sizes (e.g., under 50KB). 
+                Our tool automatically compresses your image to your desired limit without losing visible quality.
+            </li>
+            <li>
+                <strong>Smart Resizing:</strong> Acting as a flexible <strong>image resizer</strong>, you can swap dimensions or revert to the original size instantly.
+            </li>
+        </ul>
+    </article>
+
+    <!-- Blog Sidebar: Aside Tag for Semantic SEO -->
+    <aside class="blog-sidebar">
+        <div class="blog-card">
+            <h3><a href="#">How to Size Reduce Photos for Visas</a></h3>
+            <p style="font-size:0.9em; color:var(--text-secondary);">A complete guide to compressing image files to meet the 50kb or 100kb limits common in applications.</p>
+            <span class="blog-meta">Jan 24, 2025 • 3 min read</span>
+        </div>
+        
+        <div class="blog-card">
+            <h3><a href="#">Best Free Image Resizer Tools</a></h3>
+            <p style="font-size:0.9em; color:var(--text-secondary);">Why our online cropper is the fastest way to adjust dimensions without software installation.</p>
+            <span class="blog-meta">Jan 10, 2025 • 4 min read</span>
+        </div>
+
+        <div class="blog-card">
+            <h3><a href="#">Crop vs Resize: What's the Difference?</a></h3>
+            <p style="font-size:0.9em; color:var(--text-secondary);">Understanding when to use the crop tool to change composition versus resizing to change pixel density.</p>
+            <span class="blog-meta">Dec 15, 2024 • 2 min read</span>
+        </div>
+    </aside>
 </div>
 
 <!-- Cropper.js Script -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 <script>
-    // DOM Elements
+    // --- Dark Mode & Animation Logic ---
+    const themeToggle = document.getElementById('themeToggle');
+    const body = document.body;
+
+    // 1. Check saved preference
+    if(localStorage.getItem('theme') === 'dark') {
+        body.classList.add('dark-mode');
+    }
+
+    // 2. Trigger Attention Animation on Load (wait 1s)
+    setTimeout(() => {
+        // Only if user hasn't clicked it yet
+        if (!themeToggle.classList.contains('clicked')) {
+            themeToggle.classList.add('attention');
+        }
+    }, 1000);
+
+    // 3. Handle Click
+    themeToggle.addEventListener('click', () => {
+        // Stop the attention wiggle
+        themeToggle.classList.remove('attention');
+        
+        // Add the click spin
+        themeToggle.classList.add('clicked');
+        
+        // Toggle Theme
+        body.classList.toggle('dark-mode');
+        
+        // Save preference
+        if(body.classList.contains('dark-mode')) {
+            localStorage.setItem('theme', 'dark');
+        } else {
+            localStorage.setItem('theme', 'light');
+        }
+
+        // Remove click class after animation finishes (500ms)
+        setTimeout(() => {
+            themeToggle.classList.remove('clicked');
+        }, 500);
+    });
+
+    // --- Cropper Tool Logic ---
     const image = document.getElementById('image');
     const inputImage = document.getElementById('inputImage');
     const uploadPlaceholder = document.getElementById('upload-placeholder');
@@ -221,6 +517,10 @@
     const targetHeightInput = document.getElementById('targetHeight');
     const maxSizeInput = document.getElementById('maxSizeKB');
     const btnCrop = document.getElementById('btnCrop');
+    
+    // New Buttons
+    const btnSwap = document.getElementById('btnSwap');
+    const btnOriginal = document.getElementById('btnOriginal');
 
     // Result Elements
     const resultContainer = document.getElementById('result-container');
@@ -229,6 +529,8 @@
     const msgBox = document.getElementById('msgBox');
 
     let cropper;
+    let originalWidth = 0;
+    let originalHeight = 0;
 
     // 1. Handle Image Upload
     inputImage.addEventListener('change', function (e) {
@@ -237,7 +539,16 @@
             const file = files[0];
             const url = URL.createObjectURL(file);
             
-            // Clean up previous cropper
+            // Get original dimensions
+            const tempImg = new Image();
+            tempImg.src = url;
+            tempImg.onload = function() {
+                originalWidth = this.naturalWidth;
+                originalHeight = this.naturalHeight;
+                btnOriginal.style.display = 'inline-block';
+                btnOriginal.innerText = `Use Original (${originalWidth}x${originalHeight})`;
+            };
+
             if (cropper) {
                 cropper.destroy();
                 cropper = null;
@@ -247,9 +558,8 @@
             image.style.display = 'block';
             uploadPlaceholder.style.display = 'none';
 
-            // Initialize Cropper
             cropper = new Cropper(image, {
-                viewMode: 1, // Restrict crop box to canvas
+                viewMode: 1,
                 dragMode: 'move',
                 autoCropArea: 0.8,
                 restore: false,
@@ -260,56 +570,61 @@
                 cropBoxResizable: true,
                 toggleDragModeOnDblclick: false,
                 ready: function () {
-                    // Enable controls
                     rotateSlider.disabled = false;
                     rotateInput.disabled = false;
                     btnCrop.disabled = false;
-                    
-                    // Set initial aspect ratio based on inputs
                     updateAspectRatio();
                 },
             });
             
-            // Reset rotation inputs
             rotateSlider.value = 0;
             rotateInput.value = 0;
             resultContainer.style.display = 'none';
         }
     });
 
-    // 2. Handle Rotation (Sync Slider and Input)
+    // 2. Handle Rotation
     function handleRotation(value) {
         if (!cropper) return;
-        let numVal = parseFloat(value);
-        cropper.rotateTo(numVal);
+        cropper.rotateTo(parseFloat(value));
     }
-
     rotateSlider.addEventListener('input', (e) => {
         rotateInput.value = e.target.value;
         handleRotation(e.target.value);
     });
-
     rotateInput.addEventListener('input', (e) => {
         rotateSlider.value = e.target.value;
         handleRotation(e.target.value);
     });
 
-    // 3. Dynamic Aspect Ratio (Optional)
-    // If you want the crop box to lock to 150:200 ratio, uncomment listener below.
-    // Currently, it allows free crop, but squashes/stretches to target size. 
-    // Usually for passports, it's better to force the aspect ratio visually:
+    // 3. Size Controls
     function updateAspectRatio() {
         if(!cropper) return;
-        const w = parseInt(targetWidthInput.value);
-        const h = parseInt(targetHeightInput.value);
+        const w = parseInt(targetWidthInput.value) || 1;
+        const h = parseInt(targetHeightInput.value) || 1;
         cropper.setAspectRatio(w / h);
     }
 
     targetWidthInput.addEventListener('change', updateAspectRatio);
     targetHeightInput.addEventListener('change', updateAspectRatio);
 
+    btnSwap.addEventListener('click', function() {
+        const currentW = targetWidthInput.value;
+        const currentH = targetHeightInput.value;
+        targetWidthInput.value = currentH;
+        targetHeightInput.value = currentW;
+        updateAspectRatio();
+    });
 
-    // 4. Crop, Resize, and Compress Logic
+    btnOriginal.addEventListener('click', function() {
+        if(originalWidth > 0 && originalHeight > 0) {
+            targetWidthInput.value = originalWidth;
+            targetHeightInput.value = originalHeight;
+            updateAspectRatio();
+        }
+    });
+
+    // 4. Crop, Resize, and Compress
     btnCrop.addEventListener('click', function () {
         if (!cropper) return;
 
@@ -317,60 +632,45 @@
         const height = parseInt(targetHeightInput.value);
         const maxKB = parseInt(maxSizeInput.value);
 
-        // A. Get Cropped Canvas (Resized to target dimensions)
-        // CropperJS handles the resizing math here
         const canvas = cropper.getCroppedCanvas({
             width: width,
             height: height,
-            fillColor: '#fff', // Fill transparent areas with white (for JPEGs)
+            fillColor: '#fff',
             imageSmoothingEnabled: true,
             imageSmoothingQuality: 'high',
         });
 
-        // B. Compression Loop
-        // We start at high quality (0.9) and reduce if the file is too big
         let quality = 0.95;
         
         const processBlob = (callback) => {
             canvas.toBlob((blob) => {
-                // Check size
                 const sizeKB = blob.size / 1024;
-
                 if (sizeKB > maxKB && quality > 0.1) {
-                    // If too big, lower quality and try again
                     quality -= 0.05;
-                    processBlob(callback); // Recursive call
+                    processBlob(callback);
                 } else {
-                    // Done
                     callback(blob, sizeKB);
                 }
             }, 'image/jpeg', quality);
         };
 
-        // Start processing
+
         processBlob((blob, finalSizeKB) => {
-            // Create URL for preview and download
             const url = URL.createObjectURL(blob);
-            
             resultImg.src = url;
             downloadLink.href = url;
             downloadLink.download = `photo_${width}x${height}.jpg`;
             
-            // Show result
             resultContainer.style.display = 'block';
             
-            // Validation Message
             if (finalSizeKB > maxKB) {
                 msgBox.innerHTML = `<div class="error-msg">Warning: Could not compress below ${maxKB}KB. Current: ${finalSizeKB.toFixed(2)}KB</div>`;
             } else {
                 msgBox.innerHTML = `<div class="success-msg">Success! Dimensions: ${width}x${height}px. Size: ${finalSizeKB.toFixed(2)}KB</div>`;
             }
-
-            // Scroll to result
             resultContainer.scrollIntoView({ behavior: 'smooth' });
         });
     });
-
 </script>
 </body>
 </html>
