@@ -1,5 +1,5 @@
 # 🛂 Passport Photo Crop & Compress Tool
-Demo : https://imagecropper-vathiar8795-at6clnxu.leapcell.dev/
+Demo : https://imageresizer.leapcell.app/
 
 
 A lightweight web application designed to help users prepare photos for online forms with strict upload requirements (e.g., passport applications, visa forms). 
