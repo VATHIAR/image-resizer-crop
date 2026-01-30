@@ -170,12 +170,6 @@
         #image { max-width: 100%; display: block; }
         .placeholder-text { color: #aaa; }
 
-        /* Realtime Grayscale Class */
-        .cropper-container.grayscale-filter {
-            filter: grayscale(100%);
-            transition: filter 0.3s ease;
-        }
-
         .controls-area {
             flex: 1;
             min-width: 280px;
@@ -238,7 +232,6 @@
             display: inline-block;
         }
 
-        /* B&W Toggle & Button Group */
         .bw-toggle {
             display: flex;
             align-items: center;
@@ -246,7 +239,7 @@
             background: var(--bg-color);
             border: 1px solid var(--border-color);
             padding: 0 10px;
-            height: 38px; /* Match input height */
+            height: 38px;
             border-radius: 4px;
             cursor: pointer;
             white-space: nowrap;
@@ -280,7 +273,6 @@
         
         .btn:disabled { background-color: #ccc; cursor: not-allowed; }
 
-        /* Output & SEO Styles */
         #result-container {
             margin-top: 20px;
             display: none;
@@ -373,7 +365,7 @@
         <!-- Button Group -->
         <div class="button-group">
             <button id="btnCrop" class="btn" disabled>Crop & Download</button>
-            <button id="btnNoCrop" class="btn btn-secondary" disabled>Resize & Compress (Full Image)</button>
+            <button id="btnCompressOnly" class="btn btn-secondary" disabled>Compress Only</button>
         </div>
     </div>
 
@@ -463,7 +455,7 @@
     
     // Buttons
     const btnCrop = document.getElementById('btnCrop');
-    const btnNoCrop = document.getElementById('btnNoCrop'); // No Crop Button
+    const btnCompressOnly = document.getElementById('btnCompressOnly'); // Changed ID
     const btnSwap = document.getElementById('btnSwap');
     const btnOriginal = document.getElementById('btnOriginal');
 
@@ -476,21 +468,6 @@
     let cropper;
     let originalWidth = 0;
     let originalHeight = 0;
-
-    // --- Realtime Filter Logic ---
-    function updatePreviewFilter() {
-        const container = document.querySelector('.cropper-container');
-        if (container) {
-            if (cbBW.checked) {
-                container.classList.add('grayscale-filter');
-            } else {
-                container.classList.remove('grayscale-filter');
-            }
-        }
-    }
-    
-    // Listen for checkbox changes
-    cbBW.addEventListener('change', updatePreviewFilter);
 
     // 1. Upload
     inputImage.addEventListener('change', function (e) {
@@ -520,9 +497,10 @@
                 cropBoxMovable: true, cropBoxResizable: true, toggleDragModeOnDblclick: false,
                 ready: function () {
                     rotateSlider.disabled = false; rotateInput.disabled = false;
-                    btnCrop.disabled = false; btnNoCrop.disabled = false;
+                    btnCrop.disabled = false; btnCompressOnly.disabled = false;
                     updateAspectRatio();
-                    updatePreviewFilter(); // Apply filter if checked before upload
+                    // Apply B&W if already checked
+                    updatePreviewFilter();
                 },
             });
             rotateSlider.value = 0; rotateInput.value = 0;
@@ -530,7 +508,17 @@
         }
     });
 
-    // 2. Rotation & Sizing
+    // 2. Real-time B&W Filter (Visual)
+    function updatePreviewFilter() {
+        // Target the internal cropper images
+        const cropperImages = document.querySelectorAll('.cropper-view-box img, .cropper-canvas img');
+        const filterVal = cbBW.checked ? 'grayscale(100%)' : 'none';
+        cropperImages.forEach(img => img.style.filter = filterVal);
+    }
+
+    cbBW.addEventListener('change', updatePreviewFilter);
+
+    // 3. Rotation & Sizing
     function handleRotation(value) { if (cropper) cropper.rotateTo(parseFloat(value)); }
     rotateSlider.addEventListener('input', (e) => { rotateInput.value = e.target.value; handleRotation(e.target.value); });
     rotateInput.addEventListener('input', (e) => { rotateSlider.value = e.target.value; handleRotation(e.target.value); });
@@ -553,9 +541,9 @@
         if(originalWidth > 0) { targetWidthInput.value = originalWidth; targetHeightInput.value = originalHeight; updateAspectRatio(); }
     });
 
-    // --- 3. Processing Helper Functions ---
+    // --- 4. Processing Helper Functions ---
 
-    // Apply Grayscale Filter to Canvas Pixel Data (For Export)
+    // Apply Grayscale Filter to Canvas Pixel Data
     function applyBlackAndWhite(canvas) {
         const ctx = canvas.getContext('2d');
         const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -571,7 +559,7 @@
 
     // Compression Loop & Display Result
     function compressAndDisplay(canvas, width, height, maxKB) {
-        // Apply B&W Pixel manipulation if checked
+        // Apply B&W if checked
         if (cbBW.checked) {
             applyBlackAndWhite(canvas);
         }
@@ -605,7 +593,7 @@
         });
     }
 
-    // 4. Button Action: Crop & Download
+    // 5. Button Action: Crop & Download
     btnCrop.addEventListener('click', function () {
         if (!cropper) return;
         const width = parseInt(targetWidthInput.value);
@@ -619,18 +607,22 @@
         compressAndDisplay(canvas, width, height, parseInt(maxSizeInput.value));
     });
 
-    // 5. Button Action: No Crop (Resize & Compress Full Image)
-    btnNoCrop.addEventListener('click', function() {
+    // 6. Button Action: Compress Only (Original Image)
+    // Updated Logic: Uses natural dimension, ignores crop box/input dimension
+    btnCompressOnly.addEventListener('click', function() {
         if (!cropper) return;
-        const width = parseInt(targetWidthInput.value);
-        const height = parseInt(targetHeightInput.value);
 
+        // Use natural dimensions of the uploaded file
+        const width = image.naturalWidth;
+        const height = image.naturalHeight;
+
+        // Create a new canvas to draw the FULL ORIGINAL image
         const canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext('2d');
 
-        // Draw original image resized
+        // Draw original source image
         ctx.fillStyle = '#fff';
         ctx.fillRect(0, 0, width, height);
         ctx.drawImage(image, 0, 0, width, height);
