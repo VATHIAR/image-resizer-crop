@@ -284,7 +284,7 @@
         .bw-toggle label { margin: 0; cursor: pointer; font-size: 0.9rem; font-weight: normal; }
 
         /* ---- File Size Control Group ---- */
-        .size-limits-group {
+        .size-limits-body {
             display: flex;
             flex-direction: column;
             gap: 10px;
@@ -381,6 +381,29 @@
             font-size: 0.78rem;
             color: var(--text-secondary);
             margin-top: 4px;
+        }
+
+        /* Header row for file size group */
+        .size-group-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            gap: 10px;
+        }
+
+        /* Disabled body overlay */
+        .size-limits-body {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            position: relative;
+            transition: opacity 0.2s;
+        }
+        .size-limits-body.no-compress {
+            opacity: 0.35;
+            pointer-events: none;
+            user-select: none;
         }
 
         /* ---- Buttons ---- */
@@ -494,9 +517,16 @@
         </div>
 
         <!-- ===== File Size Control Group ===== -->
-        <div class="control-group">
-            <label>4. File Size Limits (KB)</label>
-            <div class="size-limits-group">
+        <div class="control-group" id="fileSizeGroup">
+            <div class="size-group-header">
+                <label style="margin:0;">4. File Size Limits (KB)</label>
+                <label class="pill-toggle" title="Disable all compression — export at full quality" id="noCompressToggle">
+                    <input type="checkbox" id="cbNoCompress">
+                    <span class="pill-track skip-track"></span>
+                    <span class="pill-label pill-label-skip">Don't compress</span>
+                </label>
+            </div>
+            <div class="size-limits-body" id="sizeLimitsBody">
 
                 <!-- Max size row -->
                 <div class="size-row" id="maxSizeRow">
@@ -536,7 +566,7 @@
                 </div>
 
             </div>
-            <p class="size-hint">Auto-compresses to limits. Toggle <em>Skip</em> on either limit to bypass it entirely.</p>
+            <p class="size-hint" id="sizeHint">Auto-compresses to limits. Toggle <em>Skip</em> on either limit to bypass it entirely.</p>
         </div>
         <!-- ===== End File Size Control Group ===== -->
 
@@ -628,6 +658,9 @@
     const cbMinSize       = document.getElementById('cbMinSize');
     const cbMaxSkip       = document.getElementById('cbMaxSkip');
     const cbMinSkip       = document.getElementById('cbMinSkip');
+    const cbNoCompress    = document.getElementById('cbNoCompress');
+    const sizeLimitsBody  = document.getElementById('sizeLimitsBody');
+    const sizeHint        = document.getElementById('sizeHint');
     const minSizeRow      = document.getElementById('minSizeRow');
     const minSkipToggle   = document.getElementById('minSkipToggle');
     const btnCrop         = document.getElementById('btnCrop');
@@ -658,6 +691,16 @@
     cbMaxSkip.addEventListener('change', function() {
         maxSizeInput.disabled = this.checked;
         maxSizeInput.style.opacity = this.checked ? '0.4' : '1';
+    });
+
+    // Don't Compress: disable entire file size UI
+    cbNoCompress.addEventListener('change', function() {
+        const off = this.checked;
+        sizeLimitsBody.classList.toggle('no-compress', off);
+        sizeHint.style.opacity = off ? '0.35' : '1';
+        sizeHint.textContent = off
+            ? 'Compression disabled — image exported at full quality.'
+            : 'Auto-compresses to limits. Toggle Skip on either limit to bypass it entirely.';
     });
 
     // --- Drag & Drop ---
@@ -788,6 +831,21 @@
     // --- Core: Compress & Display ---
     function compressAndDisplay(canvas, width, height, maxKB) {
         if (cbBW.checked) applyBlackAndWhite(canvas);
+
+        // No-compress: skip all size logic, export at full quality
+        if (cbNoCompress.checked) {
+            canvas.toBlob((blob) => {
+                const sizeKB = blob.size / 1024;
+                const url = URL.createObjectURL(blob);
+                resultImg.src = url;
+                downloadLink.href = url;
+                downloadLink.download = `photo_${width}x${height}.jpg`;
+                resultContainer.style.display = 'block';
+                msgBox.innerHTML = `<div class="success-msg">✓ Done! Dimensions: ${width}×${height}px. Size: ${sizeKB.toFixed(2)}KB (uncompressed)</div>`;
+                resultContainer.scrollIntoView({ behavior: 'smooth' });
+            }, 'image/jpeg', 0.99);
+            return;
+        }
 
         const skipMax = cbMaxSkip.checked;
         const useMin  = cbMinSize.checked;
