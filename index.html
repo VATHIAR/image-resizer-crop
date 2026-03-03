@@ -148,9 +148,58 @@
             align-items: center;
             justify-content: center;
             position: relative;
+            transition: outline 0.15s, background 0.15s;
+            cursor: default;
+        }
+        .editor-area.drag-over {
+            outline: 3px dashed var(--primary-color);
+            outline-offset: -4px;
+            background: #1a2a3a;
         }
         #image { max-width: 100%; display: block; }
-        .placeholder-text { color: #aaa; }
+        .placeholder-text {
+            color: #aaa;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            pointer-events: none;
+            user-select: none;
+        }
+        .placeholder-text .drop-icon {
+            font-size: 2.5rem;
+            opacity: 0.6;
+        }
+        .placeholder-text .drop-sub {
+            font-size: 0.8rem;
+            opacity: 0.5;
+        }
+
+        /* Page-level drag overlay */
+        #page-drop-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: rgba(0, 123, 255, 0.08);
+            border: 4px dashed var(--primary-color);
+            pointer-events: none;
+            align-items: center;
+            justify-content: center;
+        }
+        #page-drop-overlay.active {
+            display: flex;
+        }
+        #page-drop-overlay .overlay-msg {
+            background: var(--container-bg);
+            color: var(--primary-color);
+            font-size: 1.6rem;
+            font-weight: 700;
+            padding: 30px 50px;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+            pointer-events: none;
+        }
 
         .controls-area {
             flex: 1;
@@ -308,6 +357,14 @@
             color: var(--primary-color);
         }
 
+        .pill-label-skip { color: var(--text-secondary); }
+        .pill-toggle input:checked ~ .pill-label-skip {
+            color: #e09400;
+        }
+        .pill-toggle input:checked + .pill-track.skip-track {
+            background: #e09400;
+        }
+
         /* Min size row: visually dimmed when disabled */
         .size-row.disabled .pill-label {
             color: var(--text-secondary);
@@ -386,14 +443,23 @@
 
 <button class="theme-toggle" id="themeToggle" aria-label="Toggle Dark Mode" title="Toggle Dark Mode">🌓</button>
 
+<!-- Page-level drop overlay -->
+<div id="page-drop-overlay">
+    <div class="overlay-msg">📂 Drop your image anywhere</div>
+</div>
+
 <main class="container">
     <header style="width:100%;">
         <h2 class="app-title">🛂 Passport Photo Crop & Resize</h2>
         <p class="privacy-note">Privacy Note: All processing happens in your browser. Your images, your eyes only.</p>
     </header>
 
-    <div class="editor-area">
-        <div id="upload-placeholder" class="placeholder-text">Upload an image to start</div>
+    <div class="editor-area" id="editorArea">
+        <div id="upload-placeholder" class="placeholder-text">
+            <span class="drop-icon">🖼️</span>
+            <span>Drop image here or use Upload below</span>
+            <span class="drop-sub">Supports JPG, PNG, WEBP, GIF</span>
+        </div>
         <img id="image" src="" alt="">
     </div>
 
@@ -438,6 +504,11 @@
                         <small>Max size</small>
                         <input type="number" id="maxSizeKB" value="100" min="1">
                     </div>
+                    <label class="pill-toggle" title="Don't apply max compression limit">
+                        <input type="checkbox" id="cbMaxSkip">
+                        <span class="pill-track skip-track"></span>
+                        <span class="pill-label pill-label-skip">Skip</span>
+                    </label>
                     <div class="bw-toggle" title="Convert to Black & White">
                         <input type="checkbox" id="cbBW">
                         <label for="cbBW">B&amp;W</label>
@@ -446,7 +517,7 @@
 
                 <div class="size-limits-divider"></div>
 
-                <!-- Min size row with toggle -->
+                <!-- Min size row with enable + skip toggles -->
                 <div class="size-row disabled" id="minSizeRow">
                     <div class="input-wrapper">
                         <small>Min size</small>
@@ -457,10 +528,15 @@
                         <span class="pill-track"></span>
                         <span class="pill-label">Min</span>
                     </label>
+                    <label class="pill-toggle" id="minSkipToggle" title="Don't apply min padding" style="opacity:0.35; pointer-events:none;">
+                        <input type="checkbox" id="cbMinSkip" disabled>
+                        <span class="pill-track skip-track"></span>
+                        <span class="pill-label pill-label-skip">Skip</span>
+                    </label>
                 </div>
 
             </div>
-            <p class="size-hint">Auto-compresses to stay within max. When min is enabled, pads quality to meet the floor.</p>
+            <p class="size-hint">Auto-compresses to limits. Toggle <em>Skip</em> on either limit to bypass it entirely.</p>
         </div>
         <!-- ===== End File Size Control Group ===== -->
 
@@ -550,7 +626,10 @@
     const minSizeInput    = document.getElementById('minSizeKB');
     const cbBW            = document.getElementById('cbBW');
     const cbMinSize       = document.getElementById('cbMinSize');
+    const cbMaxSkip       = document.getElementById('cbMaxSkip');
+    const cbMinSkip       = document.getElementById('cbMinSkip');
     const minSizeRow      = document.getElementById('minSizeRow');
+    const minSkipToggle   = document.getElementById('minSkipToggle');
     const btnCrop         = document.getElementById('btnCrop');
     const btnCompressOnly = document.getElementById('btnCompressOnly');
     const btnSwap         = document.getElementById('btnSwap');
@@ -568,15 +647,28 @@
         const enabled = this.checked;
         minSizeInput.disabled = !enabled;
         minSizeRow.classList.toggle('disabled', !enabled);
+        // Enable/disable the Skip toggle for min
+        cbMinSkip.disabled = !enabled;
+        minSkipToggle.style.opacity = enabled ? '1' : '0.35';
+        minSkipToggle.style.pointerEvents = enabled ? 'auto' : 'none';
+        if (!enabled) cbMinSkip.checked = false; // reset skip when disabling min
     });
 
-    // --- Upload ---
-    inputImage.addEventListener('change', function(e) {
-        const files = e.target.files;
-        if (!files || files.length === 0) return;
-        const file = files[0];
-        const url = URL.createObjectURL(file);
+    // Max Skip toggle: dim/restore the max input
+    cbMaxSkip.addEventListener('change', function() {
+        maxSizeInput.disabled = this.checked;
+        maxSizeInput.style.opacity = this.checked ? '0.4' : '1';
+    });
 
+    // --- Drag & Drop ---
+    const editorArea      = document.getElementById('editorArea');
+    const pageDropOverlay = document.getElementById('page-drop-overlay');
+
+    // Shared load-from-file logic (reused by file input + drop)
+    function loadImageFile(file) {
+        if (!file || !file.type.startsWith('image/')) return;
+
+        const url = URL.createObjectURL(file);
         const tempImg = new Image();
         tempImg.src = url;
         tempImg.onload = function() {
@@ -587,7 +679,6 @@
         };
 
         if (cropper) { cropper.destroy(); cropper = null; }
-
         image.src = url;
         image.style.display = 'block';
         uploadPlaceholder.style.display = 'none';
@@ -608,6 +699,42 @@
         rotateSlider.value = 0;
         rotateInput.value = 0;
         resultContainer.style.display = 'none';
+    }
+
+    // Page-level drag events (show overlay when dragging a file over the page)
+    let dragCounter = 0;
+    document.addEventListener('dragenter', (e) => {
+        if (e.dataTransfer && e.dataTransfer.types.includes('Files')) {
+            dragCounter++;
+            pageDropOverlay.classList.add('active');
+        }
+    });
+    document.addEventListener('dragleave', () => {
+        dragCounter--;
+        if (dragCounter <= 0) { dragCounter = 0; pageDropOverlay.classList.remove('active'); }
+    });
+    document.addEventListener('dragover', (e) => e.preventDefault());
+    document.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dragCounter = 0;
+        pageDropOverlay.classList.remove('active');
+        const file = e.dataTransfer?.files?.[0];
+        if (file) loadImageFile(file);
+    });
+
+    // Editor area specific drag highlight
+    editorArea.addEventListener('dragover', (e) => { e.preventDefault(); editorArea.classList.add('drag-over'); });
+    editorArea.addEventListener('dragleave', () => editorArea.classList.remove('drag-over'));
+    editorArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        editorArea.classList.remove('drag-over');
+        // The page-level drop handler already fires; avoid double-loading
+    });
+
+    // --- Upload (file input) ---
+    inputImage.addEventListener('change', function(e) {
+        const file = e.target.files?.[0];
+        if (file) loadImageFile(file);
     });
 
     // --- B&W Preview ---
@@ -662,14 +789,25 @@
     function compressAndDisplay(canvas, width, height, maxKB) {
         if (cbBW.checked) applyBlackAndWhite(canvas);
 
+        const skipMax = cbMaxSkip.checked;
         const useMin  = cbMinSize.checked;
-        const minKB   = useMin ? (parseInt(minSizeInput.value) || 0) : 0;
+        const skipMin = cbMinSkip.checked;
+        const minKB   = (useMin && !skipMin) ? (parseInt(minSizeInput.value) || 0) : 0;
 
-        // Validate min < max
-        if (useMin && minKB >= maxKB) {
+        // Validate min < max (only when both active)
+        if (useMin && !skipMin && !skipMax && minKB >= maxKB) {
             msgBox.innerHTML = `<div class="error-msg">⚠ Min size (${minKB}KB) must be less than Max size (${maxKB}KB).</div>`;
             resultContainer.style.display = 'block';
             resultContainer.scrollIntoView({ behavior: 'smooth' });
+            return;
+        }
+
+        // If max is skipped, just encode at highest quality and skip to padUp
+        if (skipMax) {
+            canvas.toBlob((blob) => {
+                const sizeKB = blob.size / 1024;
+                padUp(blob, sizeKB, finalise);
+            }, 'image/jpeg', 0.95);
             return;
         }
 
@@ -690,16 +828,14 @@
 
         // Step 2 (optional): if result is below minKB, pad it up with a noise overlay
         const padUp = (blob, sizeKB, callback) => {
-            if (!useMin || sizeKB >= minKB) {
+            if (!useMin || skipMin || sizeKB >= minKB) {
                 callback(blob, sizeKB);
                 return;
             }
 
-            // Add subtle noise to increase file size without visible quality loss
             const ctx = canvas.getContext('2d');
             const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const data = imgData.data;
-            // Tiny noise (±1 per channel) that increases entropy → larger file
             for (let i = 0; i < data.length; i += 4) {
                 data[i]     = Math.min(255, Math.max(0, data[i]     + (Math.random() * 2 - 1)));
                 data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + (Math.random() * 2 - 1)));
@@ -707,9 +843,7 @@
             }
             ctx.putImageData(imgData, 0, 0);
 
-            // Re-encode at higher quality to meet the minimum
             let padQuality = Math.min(quality + 0.1, 1.0);
-
             const tryPad = () => {
                 canvas.toBlob((newBlob) => {
                     const newSizeKB = newBlob.size / 1024;
@@ -724,32 +858,36 @@
             tryPad();
         };
 
+        const finalise = (finalBlob, finalSizeKB) => {
+            const url = URL.createObjectURL(finalBlob);
+            resultImg.src = url;
+            downloadLink.href = url;
+            downloadLink.download = `photo_${width}x${height}.jpg`;
+            resultContainer.style.display = 'block';
+
+            let msgs = '';
+
+            if (!skipMax && finalSizeKB > maxKB) {
+                msgs += `<div class="error-msg">⚠ Could not compress below ${maxKB}KB. Current: ${finalSizeKB.toFixed(2)}KB</div>`;
+            }
+            if (useMin && !skipMin && finalSizeKB < minKB) {
+                msgs += `<div class="warn-msg">⚠ Could not pad above ${minKB}KB. Current: ${finalSizeKB.toFixed(2)}KB</div>`;
+            }
+            if (!msgs) {
+                let sizeNote = `Size: ${finalSizeKB.toFixed(2)}KB`;
+                if (skipMax && skipMin)        sizeNote += ' (no size limits applied)';
+                else if (skipMax)              sizeNote += ` (min ${minKB}KB, max skipped)`;
+                else if (useMin && !skipMin)   sizeNote += ` (within ${minKB}–${maxKB}KB range)`;
+                else                           sizeNote += ` (within max ${maxKB}KB)`;
+                msgs = `<div class="success-msg">✓ Done! Dimensions: ${width}×${height}px. ${sizeNote}</div>`;
+            }
+
+            msgBox.innerHTML = msgs;
+            resultContainer.scrollIntoView({ behavior: 'smooth' });
+        };
+
         compressDown((blob, sizeKB) => {
-            padUp(blob, sizeKB, (finalBlob, finalSizeKB) => {
-                const url = URL.createObjectURL(finalBlob);
-                resultImg.src = url;
-                downloadLink.href = url;
-                downloadLink.download = `photo_${width}x${height}.jpg`;
-                resultContainer.style.display = 'block';
-
-                let msgs = '';
-
-                if (finalSizeKB > maxKB) {
-                    msgs += `<div class="error-msg">⚠ Could not compress below ${maxKB}KB. Current: ${finalSizeKB.toFixed(2)}KB</div>`;
-                }
-                if (useMin && finalSizeKB < minKB) {
-                    msgs += `<div class="warn-msg">⚠ Could not pad above ${minKB}KB. Current: ${finalSizeKB.toFixed(2)}KB</div>`;
-                }
-                if (!msgs) {
-                    let sizeNote = `Size: ${finalSizeKB.toFixed(2)}KB`;
-                    if (useMin) sizeNote += ` (within ${minKB}–${maxKB}KB range)`;
-                    else        sizeNote += ` (within max ${maxKB}KB)`;
-                    msgs = `<div class="success-msg">✓ Done! Dimensions: ${width}×${height}px. ${sizeNote}</div>`;
-                }
-
-                msgBox.innerHTML = msgs;
-                resultContainer.scrollIntoView({ behavior: 'smooth' });
-            });
+            padUp(blob, sizeKB, finalise);
         });
     }
 
