@@ -19,7 +19,7 @@
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@graph": [
+      "@graph":[
         {
           "@type": "SoftwareApplication",
           "name": "Document Photo Cropper",
@@ -275,7 +275,7 @@
         .input-wrapper { flex: 1; }
         .input-wrapper small { display: block; margin-bottom: 2px; font-size: 0.75rem; color: var(--text-secondary); }
 
-        input[type="number"], input[type="file"] {
+        input[type="number"], input[type="file"], select {
             width: 100%;
             padding: 8px;
             border: 1px solid var(--border-color);
@@ -284,6 +284,8 @@
             border-radius: 4px;
             box-sizing: border-box;
         }
+
+        select { cursor: pointer; }
 
         input[type="number"]:disabled {
             opacity: 0.4;
@@ -428,6 +430,7 @@
             font-size: 0.78rem;
             color: var(--text-secondary);
             margin-top: 4px;
+            transition: opacity 0.2s, color 0.2s;
         }
 
         /* Header row for file size group */
@@ -569,10 +572,19 @@
             <button id="btnOriginal" class="btn-link" style="display:none;">Use Original Image Size</button>
         </div>
 
+        <!-- ===== Output Format ===== -->
+        <div class="control-group">
+            <label>4. Output Format</label>
+            <select id="outputFormat">
+                <option value="image/jpeg">JPG (Smaller file size, compressed)</option>
+                <option value="image/png">PNG (Best quality, lossless)</option>
+            </select>
+        </div>
+
         <!-- ===== File Size Control Group ===== -->
         <div class="control-group" id="fileSizeGroup">
             <div class="size-group-header">
-                <label style="margin:0;">4. File Size Limits (KB)</label>
+                <label style="margin:0;">5. File Size Limits (KB)</label>
                 <label class="pill-toggle" title="Disable all compression — export at full quality" id="noCompressToggle">
                     <input type="checkbox" id="cbNoCompress">
                     <span class="pill-track skip-track"></span>
@@ -705,6 +717,7 @@
     const rotateInput     = document.getElementById('rotateInput');
     const targetWidthInput  = document.getElementById('targetWidth');
     const targetHeightInput = document.getElementById('targetHeight');
+    const outputFormat    = document.getElementById('outputFormat');
     const maxSizeInput    = document.getElementById('maxSizeKB');
     const minSizeInput    = document.getElementById('minSizeKB');
     const cbBW            = document.getElementById('cbBW');
@@ -730,7 +743,42 @@
     let cropper;
     let originalWidth = 0, originalHeight = 0;
 
-    // --- Min Size Toggle ---
+    // --- Format & Size Toggles ---
+    outputFormat.addEventListener('change', function() {
+        const noCompressToggleLabel = document.getElementById('noCompressToggle');
+        if (this.value === 'image/png') {
+            if (!cbNoCompress.checked) cbNoCompress.checked = true;
+            cbNoCompress.disabled = true;
+            noCompressToggleLabel.style.pointerEvents = 'none';
+            noCompressToggleLabel.style.opacity = '0.6';
+            cbNoCompress.dispatchEvent(new Event('change'));
+        } else {
+            cbNoCompress.disabled = false;
+            noCompressToggleLabel.style.pointerEvents = 'auto';
+            noCompressToggleLabel.style.opacity = '1';
+            cbNoCompress.dispatchEvent(new Event('change'));
+        }
+    });
+
+    cbNoCompress.addEventListener('change', function() {
+        const off = this.checked;
+        sizeLimitsBody.classList.toggle('no-compress', off);
+        
+        if (outputFormat.value === 'image/png') {
+            sizeHint.textContent = 'PNG selected: Lossless format, file size limits disabled.';
+            sizeHint.style.opacity = '1';
+            sizeHint.style.color = 'var(--text-color)';
+            sizeHint.style.fontWeight = 'bold';
+        } else {
+            sizeHint.style.opacity = off ? '0.35' : '1';
+            sizeHint.style.color = 'var(--text-secondary)';
+            sizeHint.style.fontWeight = 'normal';
+            sizeHint.textContent = off
+                ? 'Compression disabled — image exported at full quality.'
+                : 'Auto-compresses to limits. Toggle Skip on either limit to bypass it entirely.';
+        }
+    });
+
     cbMinSize.addEventListener('change', function() {
         const enabled = this.checked;
         minSizeInput.disabled = !enabled;
@@ -745,16 +793,6 @@
     cbMaxSkip.addEventListener('change', function() {
         maxSizeInput.disabled = this.checked;
         maxSizeInput.style.opacity = this.checked ? '0.4' : '1';
-    });
-
-    // Don't Compress: disable entire file size UI
-    cbNoCompress.addEventListener('change', function() {
-        const off = this.checked;
-        sizeLimitsBody.classList.toggle('no-compress', off);
-        sizeHint.style.opacity = off ? '0.35' : '1';
-        sizeHint.textContent = off
-            ? 'Compression disabled — image exported at full quality.'
-            : 'Auto-compresses to limits. Toggle Skip on either limit to bypass it entirely.';
     });
 
     // --- Drag & Drop ---
@@ -825,7 +863,6 @@
     editorArea.addEventListener('drop', (e) => {
         e.preventDefault();
         editorArea.classList.remove('drag-over');
-        // The page-level drop handler already fires; avoid double-loading
     });
 
     // --- Upload (file input) ---
@@ -840,19 +877,14 @@
         const tag = document.activeElement?.tagName?.toLowerCase();
         if (tag === 'input' && document.activeElement.type !== 'file') return;
         if (tag === 'textarea') return;
-
         const items = (e.clipboardData || e.originalEvent?.clipboardData)?.items;
         if (!items) return;
 
         for (const item of items) {
             if (item.type.startsWith('image/')) {
                 e.preventDefault();
-
-                // Flash overlay for visual feedback
                 pagePasteOverlay.classList.add('active');
                 setTimeout(() => pagePasteOverlay.classList.remove('active'), 600);
-
-                // Flash the main container
                 mainContainer.classList.remove('paste-flash');
                 void mainContainer.offsetWidth; // reflow to restart animation
                 mainContainer.classList.add('paste-flash');
@@ -917,18 +949,22 @@
     function compressAndDisplay(canvas, width, height, maxKB) {
         if (cbBW.checked) applyBlackAndWhite(canvas);
 
+        const format = outputFormat.value;
+        const ext = format === 'image/png' ? 'png' : 'jpg';
+        const forceNoCompress = (format === 'image/png');
+
         // No-compress: skip all size logic, export at full quality
-        if (cbNoCompress.checked) {
+        if (cbNoCompress.checked || forceNoCompress) {
             canvas.toBlob((blob) => {
                 const sizeKB = blob.size / 1024;
                 const url = URL.createObjectURL(blob);
                 resultImg.src = url;
                 downloadLink.href = url;
-                downloadLink.download = `photo_${width}x${height}.jpg`;
+                downloadLink.download = `photo_${width}x${height}.${ext}`;
                 resultContainer.style.display = 'block';
-                msgBox.innerHTML = `<div class="success-msg">✓ Done! Dimensions: ${width}×${height}px. Size: ${sizeKB.toFixed(2)}KB (uncompressed)</div>`;
+                msgBox.innerHTML = `<div class="success-msg">✓ Done! Dimensions: ${width}×${height}px. Size: ${sizeKB.toFixed(2)}KB (${forceNoCompress ? 'Lossless PNG' : 'uncompressed'})</div>`;
                 resultContainer.scrollIntoView({ behavior: 'smooth' });
-            }, 'image/jpeg', 0.99);
+            }, format, 1.0);
             return;
         }
 
@@ -950,7 +986,7 @@
             canvas.toBlob((blob) => {
                 const sizeKB = blob.size / 1024;
                 padUp(blob, sizeKB, finalise);
-            }, 'image/jpeg', 0.95);
+            }, format, 0.95);
             return;
         }
 
@@ -966,7 +1002,7 @@
                 } else {
                     callback(blob, sizeKB);
                 }
-            }, 'image/jpeg', quality);
+            }, format, quality);
         };
 
         // Step 2 (optional): if result is below minKB, pad it up with a noise overlay
@@ -996,7 +1032,7 @@
                     } else {
                         callback(newBlob, newSizeKB);
                     }
-                }, 'image/jpeg', padQuality);
+                }, format, padQuality);
             };
             tryPad();
         };
@@ -1005,7 +1041,7 @@
             const url = URL.createObjectURL(finalBlob);
             resultImg.src = url;
             downloadLink.href = url;
-            downloadLink.download = `photo_${width}x${height}.jpg`;
+            downloadLink.download = `photo_${width}x${height}.${ext}`;
             resultContainer.style.display = 'block';
 
             let msgs = '';
